@@ -15,7 +15,7 @@ export default function Home() {
         <header className="mb-8">
           <h1 className="text-3xl font-bold">HR Attrition Dashboard</h1>
           <p className="text-muted-foreground">
-            Monitor employee attrition trends and risk factors
+            Monitor employee attrition trends and risk factors.
           </p>
         </header>
 
