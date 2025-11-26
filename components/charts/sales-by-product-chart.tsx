@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Bar, BarChart, XAxis, YAxis } from "recharts";
+import { Pie, PieChart, Cell, Label } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
 } from "@/components/ui/chart";
 import {
   Select,
@@ -16,62 +18,66 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { DateRange, generateProductSalesData, downloadCSV } from "@/lib/data";
+import { generateRiskLevelData, downloadCSV } from "@/lib/data";
 import { Download } from "lucide-react";
 
+type AgeGroup = "all" | "18-25" | "26-35" | "36-45" | "46-55" | "56+";
+
 const chartConfig = {
-  sales: {
-    label: "Sales",
+  count: {
+    label: "Count",
   },
-  woolCap: {
-    label: "Wool cap",
+  lowRisk: {
+    label: "Low Risk",
     color: "hsl(var(--chart-1))",
   },
-  crewneck: {
-    label: "Crewneck",
+  mediumRisk: {
+    label: "Medium Risk",
     color: "hsl(var(--chart-2))",
   },
-  blouse: {
-    label: "Blouse",
+  highRisk: {
+    label: "High Risk",
     color: "hsl(var(--chart-3))",
-  },
-  tShirt: {
-    label: "T-shirt",
-    color: "hsl(var(--chart-4))",
-  },
-  longSleeve: {
-    label: "Long sleeve",
-    color: "hsl(var(--chart-5))",
   },
 };
 
 export function SalesByProductChart() {
-  const [dateRange, setDateRange] = useState<DateRange>("30d");
-  const data = generateProductSalesData(dateRange);
+  const [ageGroup, setAgeGroup] = useState<AgeGroup>("all");
+  const data = generateRiskLevelData("30d", ageGroup);
+
+  const totalEmployees = data.reduce((acc, curr) => acc + curr.count, 0);
+
+  const chartData = data.map((item) => ({
+    riskLevel: item.riskLevel,
+    value: item.count,
+    fill: item.fill,
+  }));
 
   const handleDownload = () => {
-    downloadCSV(data, `sales-by-product-${dateRange}.csv`);
+    downloadCSV(data, `attrition-risk-levels-${ageGroup}.csv`);
   };
 
   return (
     <Card suppressHydrationWarning>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <CardTitle className="text-base font-normal">
-          Sales by product name
+          Attrition Risk Levels
         </CardTitle>
         <div className="flex gap-2">
           <Select
-            value={dateRange}
-            onValueChange={(value) => setDateRange(value as DateRange)}
+            value={ageGroup}
+            onValueChange={(value) => setAgeGroup(value as AgeGroup)}
           >
             <SelectTrigger className="w-[120px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="7d">Last 7 days</SelectItem>
-              <SelectItem value="30d">Last 30 days</SelectItem>
-              <SelectItem value="90d">Last 90 days</SelectItem>
-              <SelectItem value="all">All time</SelectItem>
+              <SelectItem value="all">All Ages</SelectItem>
+              <SelectItem value="18-25">18-25</SelectItem>
+              <SelectItem value="26-35">26-35</SelectItem>
+              <SelectItem value="36-45">36-45</SelectItem>
+              <SelectItem value="46-55">46-55</SelectItem>
+              <SelectItem value="56+">56+</SelectItem>
             </SelectContent>
           </Select>
           <Button variant="outline" size="icon" onClick={handleDownload}>
@@ -82,54 +88,40 @@ export function SalesByProductChart() {
       <CardContent>
         <div className="space-y-4">
           <div className="grid grid-cols-3 gap-4 text-sm">
-            {data.slice(0, 3).map((item) => (
-              <div key={item.product} className="flex items-center gap-2">
-                <div
-                  className="h-3 w-3 rounded-sm"
-                  style={{ backgroundColor: item.fill }}
-                />
-                <span className="font-medium">{item.product}</span>
-                <span className="ml-auto">
-                  ₹
-                  {item.sales.toLocaleString("en-IN", {
-                    maximumFractionDigits: 0,
-                  })}
+            {data.map((item) => (
+              <div key={item.riskLevel} className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <div
+                    className="h-3 w-3 rounded-sm"
+                    style={{ backgroundColor: item.fill }}
+                  />
+                  <span className="text-xs text-muted-foreground">
+                    {item.riskLevel}
+                  </span>
+                </div>
+                <span className="text-xl font-bold">
+                  ₹{item.count.toLocaleString()}
                 </span>
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            {data.slice(3).map((item) => (
-              <div key={item.product} className="flex items-center gap-2">
-                <div
-                  className="h-3 w-3 rounded-sm"
-                  style={{ backgroundColor: item.fill }}
-                />
-                <span className="font-medium">{item.product}</span>
-                <span className="ml-auto">
-                  ₹
-                  {item.sales.toLocaleString("en-IN", {
-                    maximumFractionDigits: 0,
-                  })}
-                </span>
-              </div>
-            ))}
-          </div>
-          <ChartContainer config={chartConfig} className="h-20 w-full">
-            <BarChart
-              data={data}
-              layout="vertical"
-              margin={{ left: 0, right: 0 }}
-            >
-              <YAxis type="category" dataKey="product" hide />
-              <XAxis type="number" hide />
-              <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-              <Bar dataKey="sales" radius={4}>
-                {data.map((entry, index) => (
-                  <Bar key={`bar-${index}`} dataKey="sales" fill={entry.fill} />
+          <div className="text-xs text-muted-foreground">+3 more</div>
+          <ChartContainer config={chartConfig} className="h-12 w-full">
+            <PieChart>
+              <Pie
+                data={chartData}
+                dataKey="value"
+                nameKey="riskLevel"
+                innerRadius={0}
+                outerRadius={20}
+                startAngle={180}
+                endAngle={0}
+              >
+                {chartData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.fill} />
                 ))}
-              </Bar>
-            </BarChart>
+              </Pie>
+            </PieChart>
           </ChartContainer>
         </div>
       </CardContent>

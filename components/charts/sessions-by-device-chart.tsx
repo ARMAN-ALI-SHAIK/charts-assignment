@@ -18,60 +18,69 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { DateRange, generateDeviceSessionData, downloadCSV } from "@/lib/data";
+import { generateJobLevelAttritionData, downloadCSV } from "@/lib/data";
 import { Download } from "lucide-react";
 
+type JobRole = "all" | "sales" | "research" | "technician" | "manager";
+
 const chartConfig = {
-  sessions: {
-    label: "Sessions",
+  attrition: {
+    label: "Attrition",
   },
-  mobile: {
-    label: "Mobile",
+  entryLevel: {
+    label: "Entry Level",
     color: "hsl(var(--chart-1))",
   },
-  desktop: {
-    label: "Desktop",
+  midLevel: {
+    label: "Mid Level",
     color: "hsl(var(--chart-2))",
   },
-  tablet: {
-    label: "Tablet",
+  seniorLevel: {
+    label: "Senior Level",
     color: "hsl(var(--chart-3))",
   },
-  other: {
-    label: "Other",
+  executive: {
+    label: "Executive",
     color: "hsl(var(--chart-4))",
   },
 };
 
 export function SessionsByDeviceChart() {
-  const [dateRange, setDateRange] = useState<DateRange>("30d");
-  const data = generateDeviceSessionData(dateRange);
+  const [jobRole, setJobRole] = useState<JobRole>("all");
+  const data = generateJobLevelAttritionData("30d", jobRole);
 
-  const totalSessions = data.reduce((acc, curr) => acc + curr.sessions, 0);
+  const totalAttrition = data.reduce((acc, curr) => acc + curr.attrition, 0);
+
+  const chartData = data.map((item) => ({
+    jobLevel: item.jobLevel,
+    value: item.attrition,
+    fill: item.fill,
+  }));
 
   const handleDownload = () => {
-    downloadCSV(data, `sessions-by-device-${dateRange}.csv`);
+    downloadCSV(data, `attrition-by-job-level-${jobRole}.csv`);
   };
 
   return (
     <Card suppressHydrationWarning>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <CardTitle className="text-base font-normal">
-          Sessions by device
+          Attrition by Job Level
         </CardTitle>
         <div className="flex gap-2">
           <Select
-            value={dateRange}
-            onValueChange={(value) => setDateRange(value as DateRange)}
+            value={jobRole}
+            onValueChange={(value) => setJobRole(value as JobRole)}
           >
             <SelectTrigger className="w-[120px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="7d">Last 7 days</SelectItem>
-              <SelectItem value="30d">Last 30 days</SelectItem>
-              <SelectItem value="90d">Last 90 days</SelectItem>
-              <SelectItem value="all">All time</SelectItem>
+              <SelectItem value="all">All Roles</SelectItem>
+              <SelectItem value="sales">Sales</SelectItem>
+              <SelectItem value="research">Research</SelectItem>
+              <SelectItem value="technician">Technician</SelectItem>
+              <SelectItem value="manager">Manager</SelectItem>
             </SelectContent>
           </Select>
           <Button variant="outline" size="icon" onClick={handleDownload}>
@@ -80,46 +89,67 @@ export function SessionsByDeviceChart() {
         </div>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={chartConfig} className="h-[250px] w-full">
-          <PieChart>
-            <ChartTooltip content={<ChartTooltipContent />} />
-            <Pie
-              data={data}
-              dataKey="sessions"
-              nameKey="device"
-              innerRadius={60}
-              outerRadius={90}
-              paddingAngle={2}
-            >
-              {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.fill} />
-              ))}
-              <Label
-                content={({ viewBox }) => {
-                  if (viewBox && "cx" in viewBox && "cy" in viewBox) {
-                    return (
-                      <text
-                        x={viewBox.cx}
-                        y={viewBox.cy}
-                        textAnchor="middle"
-                        dominantBaseline="middle"
-                      >
-                        <tspan
+        <div className="flex items-center justify-between gap-4">
+          <ChartContainer config={chartConfig} className="h-[200px] w-[200px]">
+            <PieChart>
+              <ChartTooltip content={<ChartTooltipContent />} />
+              <Pie
+                data={chartData}
+                dataKey="value"
+                nameKey="jobLevel"
+                innerRadius={60}
+                outerRadius={80}
+                paddingAngle={2}
+              >
+                {chartData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.fill} />
+                ))}
+                <Label
+                  content={({ viewBox }) => {
+                    if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                      return (
+                        <text
                           x={viewBox.cx}
                           y={viewBox.cy}
-                          className="fill-foreground text-2xl font-bold"
+                          textAnchor="middle"
+                          dominantBaseline="middle"
                         >
-                          {(totalSessions / 1000).toFixed(0)}K
-                        </tspan>
-                      </text>
-                    );
-                  }
-                }}
-              />
-            </Pie>
-            <ChartLegend content={<ChartLegendContent />} />
-          </PieChart>
-        </ChartContainer>
+                          <tspan
+                            x={viewBox.cx}
+                            y={viewBox.cy}
+                            className="fill-foreground text-xl font-bold"
+                          >
+                            {totalAttrition}
+                          </tspan>
+                        </text>
+                      );
+                    }
+                  }}
+                />
+              </Pie>
+            </PieChart>
+          </ChartContainer>
+          <div className="flex flex-col gap-2">
+            {data.map((item) => (
+              <div key={item.jobLevel} className="flex items-center gap-2">
+                <div
+                  className="h-3 w-3 rounded-sm"
+                  style={{ backgroundColor: item.fill }}
+                />
+                <div className="flex items-baseline gap-2">
+                  <span className="text-sm">{item.jobLevel}</span>
+                  <span className="text-base font-semibold">
+                    {item.attrition.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            ))}
+            <div className="flex items-center gap-2 mt-1">
+              <div className="h-3 w-3" />
+              <span className="text-xs text-muted-foreground">+1 more</span>
+            </div>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );

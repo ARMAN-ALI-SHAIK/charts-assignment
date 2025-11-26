@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { Line, LineChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   ChartContainer,
@@ -18,51 +18,54 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import {
-  DateRange,
-  generateSessionsOverTimeData,
-  downloadCSV,
-} from "@/lib/data";
+import { generateDepartmentAttritionData, downloadCSV } from "@/lib/data";
 import { Download } from "lucide-react";
 
+type JobLevel = "all" | "entry" | "mid" | "senior" | "executive";
+
 const chartConfig = {
-  jun6_jul5_2023: {
-    label: "Jun 6–Jul 5, 2023",
-    color: "hsl(var(--chart-1))",
+  sales: {
+    label: "Sales",
+    color: "hsl(195, 100%, 50%)",
   },
-  apr22_may28_2024: {
-    label: "Apr 22–May 28, 2024",
-    color: "hsl(var(--chart-2))",
+  rd: {
+    label: "R&D",
+    color: "hsl(280, 100%, 70%)",
+  },
+  hr: {
+    label: "HR",
+    color: "hsl(330, 100%, 70%)",
   },
 };
 
 export function SessionsOverTimeChart() {
-  const [dateRange, setDateRange] = useState<DateRange>("30d");
-  const data = generateSessionsOverTimeData(dateRange);
+  const [jobLevel, setJobLevel] = useState<JobLevel>("all");
+  const data = generateDepartmentAttritionData("30d", jobLevel);
 
   const handleDownload = () => {
-    downloadCSV(data, `sessions-over-time-${dateRange}.csv`);
+    downloadCSV(data, `department-attrition-${jobLevel}.csv`);
   };
 
   return (
     <Card suppressHydrationWarning>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <CardTitle className="text-base font-normal">
-          Sessions over time
+          Department-wise Attrition
         </CardTitle>
         <div className="flex gap-2">
           <Select
-            value={dateRange}
-            onValueChange={(value) => setDateRange(value as DateRange)}
+            value={jobLevel}
+            onValueChange={(value) => setJobLevel(value as JobLevel)}
           >
             <SelectTrigger className="w-[120px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="7d">Last 7 days</SelectItem>
-              <SelectItem value="30d">Last 30 days</SelectItem>
-              <SelectItem value="90d">Last 90 days</SelectItem>
-              <SelectItem value="all">All time</SelectItem>
+              <SelectItem value="all">All Levels</SelectItem>
+              <SelectItem value="entry">Entry</SelectItem>
+              <SelectItem value="mid">Mid</SelectItem>
+              <SelectItem value="senior">Senior</SelectItem>
+              <SelectItem value="executive">Executive</SelectItem>
             </SelectContent>
           </Select>
           <Button variant="outline" size="icon" onClick={handleDownload}>
@@ -72,7 +75,7 @@ export function SessionsOverTimeChart() {
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig} className="h-[220px] w-full">
-          <BarChart data={data}>
+          <LineChart data={data}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
             <XAxis
               dataKey="date"
@@ -80,25 +83,31 @@ export function SessionsOverTimeChart() {
               axisLine={false}
               tickMargin={8}
             />
-            <YAxis
-              tickLine={false}
-              axisLine={false}
-              tickMargin={8}
-              tickFormatter={(value) => `${(value / 1000).toFixed(0)}K`}
-            />
+            <YAxis tickLine={false} axisLine={false} tickMargin={8} />
             <ChartTooltip content={<ChartTooltipContent />} />
-            <Bar
-              dataKey="jun6_jul5_2023"
-              fill={chartConfig.jun6_jul5_2023.color}
-              radius={[4, 4, 0, 0]}
+            <Line
+              type="monotone"
+              dataKey="sales"
+              stroke={chartConfig.sales.color}
+              strokeWidth={2}
+              dot={false}
             />
-            <Bar
-              dataKey="apr22_may28_2024"
-              fill={chartConfig.apr22_may28_2024.color}
-              radius={[4, 4, 0, 0]}
+            <Line
+              type="monotone"
+              dataKey="rd"
+              stroke={chartConfig.rd.color}
+              strokeWidth={2}
+              dot={false}
+            />
+            <Line
+              type="monotone"
+              dataKey="hr"
+              stroke={chartConfig.hr.color}
+              strokeWidth={2}
+              dot={false}
             />
             <ChartLegend content={<ChartLegendContent />} />
-          </BarChart>
+          </LineChart>
         </ChartContainer>
       </CardContent>
     </Card>

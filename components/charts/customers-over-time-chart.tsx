@@ -1,14 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, XAxis, YAxis, LabelList } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
 } from "@/components/ui/chart";
 import {
   Select,
@@ -18,47 +16,44 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { DateRange, generateCustomerData, downloadCSV } from "@/lib/data";
+import { generateJobRoleAttritionData, downloadCSV } from "@/lib/data";
 import { Download } from "lucide-react";
 
+type Gender = "all" | "male" | "female";
+
 const chartConfig = {
-  firstTime: {
-    label: "First time",
-    color: "hsl(var(--chart-1))",
-  },
-  recurring: {
-    label: "Recurring",
-    color: "hsl(var(--chart-2))",
+  attrition: {
+    label: "Attrition",
+    color: "hsl(195, 100%, 50%)",
   },
 };
 
 export function CustomersOverTimeChart() {
-  const [dateRange, setDateRange] = useState<DateRange>("30d");
-  const data = generateCustomerData(dateRange);
+  const [gender, setGender] = useState<Gender>("all");
+  const data = generateJobRoleAttritionData("30d", gender);
 
   const handleDownload = () => {
-    downloadCSV(data, `customers-over-time-${dateRange}.csv`);
+    downloadCSV(data, `attrition-by-job-role-${gender}.csv`);
   };
 
   return (
     <Card suppressHydrationWarning>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <CardTitle className="text-base font-normal">
-          Customers over time
+          Attrition by Job Role
         </CardTitle>
         <div className="flex gap-2">
           <Select
-            value={dateRange}
-            onValueChange={(value) => setDateRange(value as DateRange)}
+            value={gender}
+            onValueChange={(value) => setGender(value as Gender)}
           >
             <SelectTrigger className="w-[120px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="7d">Last 7 days</SelectItem>
-              <SelectItem value="30d">Last 30 days</SelectItem>
-              <SelectItem value="90d">Last 90 days</SelectItem>
-              <SelectItem value="all">All time</SelectItem>
+              <SelectItem value="all">All Genders</SelectItem>
+              <SelectItem value="male">Male</SelectItem>
+              <SelectItem value="female">Female</SelectItem>
             </SelectContent>
           </Select>
           <Button variant="outline" size="icon" onClick={handleDownload}>
@@ -68,40 +63,46 @@ export function CustomersOverTimeChart() {
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig} className="h-[200px] w-full">
-          <AreaChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-            <XAxis
-              dataKey="date"
-              tickLine={false}
-              axisLine={false}
-              tickMargin={8}
-              tickFormatter={(value) => value.slice(0, 6)}
-            />
+          <BarChart
+            data={data}
+            layout="vertical"
+            margin={{ left: 0, right: 60, top: 5, bottom: 5 }}
+          >
+            <XAxis type="number" hide />
             <YAxis
+              type="category"
+              dataKey="jobRole"
               tickLine={false}
               axisLine={false}
-              tickMargin={8}
-              tickFormatter={(value) => `${(value / 1000).toFixed(0)}K`}
+              width={150}
+              tick={{ fontSize: 11 }}
             />
-            <ChartTooltip content={<ChartTooltipContent />} />
-            <Area
-              type="monotone"
-              dataKey="firstTime"
-              stackId="1"
-              stroke={chartConfig.firstTime.color}
-              fill={chartConfig.firstTime.color}
-              fillOpacity={0.6}
+            <ChartTooltip
+              content={
+                <ChartTooltipContent
+                  labelFormatter={(value) => `Role: ${value}`}
+                  formatter={(value) => [`${value} employees`, "Attrition"]}
+                />
+              }
             />
-            <Area
-              type="monotone"
-              dataKey="recurring"
-              stackId="1"
-              stroke={chartConfig.recurring.color}
-              fill={chartConfig.recurring.color}
-              fillOpacity={0.6}
-            />
-            <ChartLegend content={<ChartLegendContent />} />
-          </AreaChart>
+            <Bar
+              dataKey="attrition"
+              fill="hsl(195, 100%, 50%)"
+              radius={[0, 4, 4, 0]}
+              maxBarSize={20}
+            >
+              <LabelList
+                dataKey="attrition"
+                position="right"
+                formatter={(value: number) => `${value}`}
+                style={{
+                  fontSize: "11px",
+                  fontWeight: 500,
+                  fill: "currentColor",
+                }}
+              />
+            </Bar>
+          </BarChart>
         </ChartContainer>
       </CardContent>
     </Card>

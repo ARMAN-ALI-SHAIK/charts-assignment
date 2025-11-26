@@ -16,43 +16,45 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { DateRange, generateCountrySalesData, downloadCSV } from "@/lib/data";
+import { generateAgeGroupAttritionData, downloadCSV } from "@/lib/data";
 import { Download } from "lucide-react";
 
+type Department = "all" | "sales" | "rd" | "hr";
+
 const chartConfig = {
-  sales: {
-    label: "Sales",
-    color: "hsl(var(--chart-1))",
+  attrition: {
+    label: "Attrition",
+    color: "hsl(195, 100%, 50%)",
   },
 };
 
 export function GrossSalesByCountryChart() {
-  const [dateRange, setDateRange] = useState<DateRange>("30d");
-  const data = generateCountrySalesData(dateRange);
+  const [department, setDepartment] = useState<Department>("all");
+  const data = generateAgeGroupAttritionData("30d", department);
 
   const handleDownload = () => {
-    downloadCSV(data, `gross-sales-by-country-${dateRange}.csv`);
+    downloadCSV(data, `attrition-by-age-group-${department}.csv`);
   };
 
   return (
     <Card suppressHydrationWarning>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <CardTitle className="text-base font-normal">
-          Gross sales by country
+          Attrition by Age Group
         </CardTitle>
         <div className="flex gap-2">
           <Select
-            value={dateRange}
-            onValueChange={(value) => setDateRange(value as DateRange)}
+            value={department}
+            onValueChange={(value) => setDepartment(value as Department)}
           >
             <SelectTrigger className="w-[120px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="7d">Last 7 days</SelectItem>
-              <SelectItem value="30d">Last 30 days</SelectItem>
-              <SelectItem value="90d">Last 90 days</SelectItem>
-              <SelectItem value="all">All time</SelectItem>
+              <SelectItem value="all">All Depts</SelectItem>
+              <SelectItem value="sales">Sales</SelectItem>
+              <SelectItem value="rd">R&D</SelectItem>
+              <SelectItem value="hr">HR</SelectItem>
             </SelectContent>
           </Select>
           <Button variant="outline" size="icon" onClick={handleDownload}>
@@ -64,29 +66,36 @@ export function GrossSalesByCountryChart() {
         <ChartContainer config={chartConfig} className="h-[220px] w-full">
           <BarChart
             data={data}
-            layout="horizontal"
+            layout="vertical"
             margin={{ left: 0, right: 60, top: 5, bottom: 5 }}
           >
             <XAxis type="number" hide />
             <YAxis
               type="category"
-              dataKey="country"
+              dataKey="ageGroup"
               tickLine={false}
               axisLine={false}
-              width={120}
+              width={60}
               tick={{ fontSize: 12 }}
             />
-            <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+            <ChartTooltip
+              content={
+                <ChartTooltipContent
+                  labelFormatter={(value) => `Age: ${value}`}
+                  formatter={(value) => [`${value} employees`, "Attrition"]}
+                />
+              }
+            />
             <Bar
-              dataKey="sales"
-              fill="hsl(var(--chart-1))"
+              dataKey="attrition"
+              fill="hsl(195, 100%, 50%)"
               radius={[0, 4, 4, 0]}
               maxBarSize={30}
             >
               <LabelList
-                dataKey="sales"
+                dataKey="attrition"
                 position="right"
-                formatter={(value: number) => `₹${(value / 1000).toFixed(0)}K`}
+                formatter={(value: number) => `${value}`}
                 style={{
                   fontSize: "12px",
                   fontWeight: 500,
